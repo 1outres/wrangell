@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- wrangell_v1alpha1_wrangellservice.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

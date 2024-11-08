@@ -1,0 +1,23 @@
+# permissions for end users to view wrangellservices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: wrangell
+    app.kubernetes.io/managed-by: kustomize
+  name: wrangellservice-viewer-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - wrangellservices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - wrangellservices/status
+  verbs:
+  - get

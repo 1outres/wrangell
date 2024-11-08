@@ -1,0 +1,67 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: wrangellservices.wrangell.loutres.me
+spec:
+  group: wrangell.loutres.me
+  names:
+    kind: WrangellService
+    listKind: WrangellServiceList
+    plural: wrangellservices
+    singular: wrangellservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.image
+      name: Image
+      type: string
+    - jsonPath: .status.replicas
+      name: Replicas
+      type: integer
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              idleTimeout:
+                default: 180
+                format: int64
+                minimum: 0
+                type: integer
+              image:
+                type: string
+              port:
+                format: int32
+                type: integer
+              targetPort:
+                format: int32
+                type: integer
+            required:
+            - image
+            - port
+            type: object
+          status:
+            properties:
+              latestRequest:
+                format: date-time
+                type: string
+              replicas:
+                format: int32
+                minimum: 0
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

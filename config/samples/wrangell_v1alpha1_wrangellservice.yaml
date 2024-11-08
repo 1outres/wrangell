@@ -1,0 +1,11 @@
+apiVersion: wrangell.loutres.me/v1alpha1
+kind: WrangellService
+metadata:
+  labels:
+    app.kubernetes.io/name: wrangell
+    app.kubernetes.io/managed-by: kustomize
+  name: wrangellservice-sample
+spec:
+  image: "ghcr.io/knative/helloworld-go:latest"
+  targetPort: 8080
+  port: 80
