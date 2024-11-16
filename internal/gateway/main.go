@@ -3,10 +3,9 @@ package gateway
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"log"
 	"net"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/routing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -175,11 +175,9 @@ func (s *server) clientRead(i int) {
 			continue
 		} else if pkt.Msg == wrangellpkt.MessageRequest {
 			ip := make(net.IP, 4)
-			binary.BigEndian.PutUint32(ip, pkt.ReqPacket.Ip)
+			binary.BigEndian.PutUint32(ip, pkt.ReqPacket.DstIp)
 
-			fmt.Println(ip.String())
-
-			w, ok := s.targets[[6]byte{ip[0], ip[1], ip[2], ip[3], byte(pkt.ReqPacket.Port), byte(pkt.ReqPacket.Port >> 8)}]
+			w, ok := s.targets[[6]byte{ip[0], ip[1], ip[2], ip[3], byte(pkt.ReqPacket.DstPort), byte(pkt.ReqPacket.DstPort >> 8)}]
 
 			if ok {
 				go func() {
@@ -235,27 +233,29 @@ func (s *server) clientRead(i int) {
 						return
 					}
 
-					srcIp, err := s.getInterfaceIP("eth0")
-					if err != nil {
-						log.Fatalf("failed to get interface IP: %v", err)
-						return
-					}
+					dstIp := net.ParseIP(pod.Status.PodIP)
+					dstPort := wrangell.Spec.Port
 					var srcPort uint16 = 12345
-					podIp := pod.Status.PodIP
-					podPort := wrangell.Spec.Port
 
-					handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever)
+					router, err := routing.New()
+					if err != nil {
+						log.Fatal("routing error:", err)
+					}
+					iface, _, srcIp, err := router.Route(dstIp)
+
+					handle, err := pcap.OpenLive(iface.Name, 1600, true, pcap.BlockForever)
 					if err != nil {
 						log.Fatalf("pcap open error: %v", err)
 						return
 					}
 					defer handle.Close()
 
-					fmt.Println("tcp and src host " + podIp + " and dst port " + string(srcPort))
-					err = handle.SetBPFFilter("tcp and src host " + podIp + " and dst port " + strconv.FormatUint(uint64(srcPort), 10))
+					dstHwaddr, err := s.getHwAddr(handle, iface, dstIp, srcIp)
 					if err != nil {
-						log.Fatalf("failed to set BPF filter: %v", err)
+						log.Fatalf("failed to get hardware address: %v", err)
+						return
 					}
+					srcHwaddr := iface.HardwareAddr
 
 					synStop := make(chan struct{})
 
@@ -264,7 +264,7 @@ func (s *server) clientRead(i int) {
 						for {
 							select {
 							case <-ticker.C:
-								res := s.sendSYN(handle, srcIp, uint16(srcPort), podIp, uint16(podPort))
+								res := s.sendSYN(handle, srcHwaddr, dstHwaddr, srcIp, dstIp, uint16(srcPort), uint16(dstPort), 0)
 								if !res {
 									return
 								}
@@ -280,27 +280,41 @@ func (s *server) clientRead(i int) {
 
 					packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
+				LOOP:
 					for {
 						select {
 						case packet := <-packetSource.Packets():
+							ipLayer := packet.Layer(layers.LayerTypeIPv4)
 							tcpLayer := packet.Layer(layers.LayerTypeTCP)
+							if ipLayer == nil || tcpLayer == nil {
+								continue
+							}
+							synackip, ok := ipLayer.(*layers.IPv4)
+							if !ok {
+								continue
+							}
+							synack, ok := tcpLayer.(*layers.TCP)
+							if !ok {
+								continue
+							}
 							if tcpLayer != nil {
-								tcp, _ := tcpLayer.(*layers.TCP)
-								fmt.Printf("Received packet: %v\n", tcp)
-								if tcp.SYN && tcp.ACK {
+								if synackip.SrcIP.Equal(dstIp) && synack.SYN {
 									log.Printf("ACK received: %s in %s", w.name, w.namespace)
 									close(synStop)
-									break
+									break LOOP
 								}
 							}
 						case <-timeoutChan:
 							log.Printf("ACK timeout: %s in %s", w.name, w.namespace)
 							close(synStop)
-							break
+							break LOOP
 						}
 					}
 
-					// TODO
+					log.Printf("Sending ACK using the initial sequence number: %s in %s", w.name, w.namespace)
+					srcip := make(net.IP, 4)
+					binary.BigEndian.PutUint32(srcip, pkt.ReqPacket.SrcIp)
+					_ = s.sendSYN(handle, srcHwaddr, dstHwaddr, srcip, dstIp, pkt.ReqPacket.SrcPort, uint16(dstPort), pkt.ReqPacket.Seq)
 				}()
 			} else {
 				log.Printf("target not found : %v", conn.RemoteAddr())
@@ -312,42 +326,76 @@ func (s *server) clientRead(i int) {
 	}
 }
 
-func (s *server) getInterfaceIP(interfaceName string) (string, error) {
-	iface, err := net.InterfaceByName(interfaceName)
-	if err != nil {
-		return "", fmt.Errorf("failed to get interface %s: %v", interfaceName, err)
+func (s *server) getHwAddr(handle *pcap.Handle, iface *net.Interface, dst, src net.IP) (net.HardwareAddr, error) {
+	start := time.Now()
+	// Prepare the layers to send for an ARP request.
+	eth := layers.Ethernet{
+		SrcMAC:       iface.HardwareAddr,
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeARP,
 	}
-
-	addrs, err := iface.Addrs()
-	if err != nil {
-		return "", fmt.Errorf("failed to get addresses for interface %s: %v", interfaceName, err)
+	arp := layers.ARP{
+		AddrType:          layers.LinkTypeEthernet,
+		Protocol:          layers.EthernetTypeIPv4,
+		HwAddressSize:     6,
+		ProtAddressSize:   4,
+		Operation:         layers.ARPRequest,
+		SourceHwAddress:   []byte(iface.HardwareAddr),
+		SourceProtAddress: []byte(src.To4()),
+		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
+		DstProtAddress:    []byte(dst.To4()),
 	}
-
-	for _, addr := range addrs {
-		switch v := addr.(type) {
-		case *net.IPNet:
-			if v.IP.To4() != nil {
-				return v.IP.String(), nil
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+	if err := gopacket.SerializeLayers(buf, opts, &eth, &arp); err != nil {
+		return nil, err
+	}
+	if err := handle.WritePacketData(buf.Bytes()); err != nil {
+		return nil, err
+	}
+	for {
+		if time.Since(start) > time.Second*3 {
+			return nil, errors.New("timeout getting ARP reply")
+		}
+		data, _, err := handle.ReadPacketData()
+		if err == pcap.NextErrorTimeoutExpired {
+			continue
+		} else if err != nil {
+			return nil, err
+		}
+		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
+		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
+			arp := arpLayer.(*layers.ARP)
+			if net.IP(arp.SourceProtAddress).Equal(net.IP(dst)) {
+				return net.HardwareAddr(arp.SourceHwAddress), nil
 			}
 		}
 	}
-
-	return "", fmt.Errorf("no IPv4 address found for interface %s", interfaceName)
 }
 
-func (s *server) sendSYN(handle *pcap.Handle, srcIP string, srcPort uint16, dstIP string, dstPort uint16) bool {
-	fmt.Printf("Sending SYN: %s:%d -> %s:%d\n", srcIP, srcPort, dstIP, dstPort)
-
+func (s *server) sendSYN(handle *pcap.Handle, srcHwaddr, dstHwaddr net.HardwareAddr, srcIp, dstIp net.IP, srcPort, dstPort uint16, seq uint32) bool {
+	eth := &layers.Ethernet{
+		BaseLayer:    layers.BaseLayer{},
+		SrcMAC:       srcHwaddr,
+		DstMAC:       dstHwaddr,
+		EthernetType: layers.EthernetTypeIPv4,
+	}
 	ip := &layers.IPv4{
-		SrcIP:    net.ParseIP(srcIP),
-		DstIP:    net.ParseIP(dstIP),
+		Version:  4,
+		Flags:    layers.IPv4DontFragment,
+		TTL:      64,
+		SrcIP:    srcIp,
+		DstIP:    dstIp,
 		Protocol: layers.IPProtocolTCP,
 	}
 	tcp := &layers.TCP{
 		SrcPort: layers.TCPPort(srcPort),
 		DstPort: layers.TCPPort(dstPort),
 		SYN:     true,
-		Window:  14600,
+		Seq:     seq,
 	}
 	tcp.SetNetworkLayerForChecksum(ip)
 
@@ -356,7 +404,7 @@ func (s *server) sendSYN(handle *pcap.Handle, srcIP string, srcPort uint16, dstI
 		FixLengths:       true,
 		ComputeChecksums: true,
 	}
-	if err := gopacket.SerializeLayers(buf, opts, ip, tcp); err != nil {
+	if err := gopacket.SerializeLayers(buf, opts, eth, ip, tcp); err != nil {
 		log.Printf("failed to serialize layers: %v", err)
 		return false
 	}
@@ -405,8 +453,6 @@ func (s *server) UpdateTarget(namespace string, name string, ip net.IP, port uin
 			Replicas: replicas,
 		},
 	}
-
-	fmt.Println(pkt.String())
 
 	s.targets[[6]byte{ip[0], ip[1], ip[2], ip[3], byte(port), byte(port >> 8)}] = wrangell{
 		replicas:  replicas,
