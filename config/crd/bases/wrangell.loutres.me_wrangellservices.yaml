@@ -55,8 +55,9 @@ spec:
               latestRequest:
                 format: date-time
                 type: string
+              loadBalancerIP:
+                type: string
               replicas:
-                format: int32
                 minimum: 0
                 type: integer
             type: object

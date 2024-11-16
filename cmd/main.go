@@ -146,12 +146,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	udpGateway := &gateway.UdpGateway{}
+	udpServer := gateway.NewServer(mgr.GetClient(), ":3030")
+	defer udpServer.Close()
+
+	go func() {
+		err := udpServer.Serve()
+		if err != nil {
+			setupLog.Error(err, "unable to start server")
+			os.Exit(1)
+		}
+	}()
 
 	if err = (&controller.WrangellServiceReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		UdpGateway: udpGateway,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Server: udpServer,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "WrangellService")
 		os.Exit(1)

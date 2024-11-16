@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"net"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,8 +38,8 @@ import (
 // WrangellServiceReconciler reconciles a WrangellService object
 type WrangellServiceReconciler struct {
 	client.Client
-	Scheme     *runtime.Scheme
-	UdpGateway *gateway.UdpGateway
+	Scheme *runtime.Scheme
+	Server gateway.Server
 }
 
 // +kubebuilder:rbac:groups=wrangell.loutres.me,resources=wrangellservices,verbs=get;list;watch;create;update;patch;delete
@@ -104,7 +105,17 @@ func (r *WrangellServiceReconciler) updateStatus(ctx context.Context, wrangell *
 		}
 	}
 
-	err := r.Status().Update(ctx, wrangell)
+	var svc corev1.Service
+	err := r.Get(ctx, client.ObjectKey{Namespace: wrangell.Namespace, Name: "svc-" + wrangell.Name}, &svc)
+	if err != nil || len(svc.Status.LoadBalancer.Ingress) < 1 {
+		wrangell.Status.LoadBalancerIP = ""
+	} else {
+		wrangell.Status.LoadBalancerIP = svc.Status.LoadBalancer.Ingress[0].IP
+	}
+
+	r.Server.UpdateTarget(wrangell.Namespace, wrangell.Name, net.ParseIP(wrangell.Status.LoadBalancerIP), uint16(wrangell.Spec.Port), wrangell.Status.Replicas)
+
+	err = r.Status().Update(ctx, wrangell)
 	return err
 }
 
@@ -157,7 +168,8 @@ func (r *WrangellServiceReconciler) reconcileDeployment(ctx context.Context, wra
 	deploy.SetName(wrangell.Name)
 
 	op, err := ctrl.CreateOrUpdate(ctx, r.Client, deploy, func() error {
-		deploy.Spec.Replicas = &wrangell.Status.Replicas
+		replicas := int32(wrangell.Status.Replicas)
+		deploy.Spec.Replicas = &replicas
 		if deploy.Spec.Selector == nil {
 			deploy.Spec.Selector = &metav1.LabelSelector{}
 		}

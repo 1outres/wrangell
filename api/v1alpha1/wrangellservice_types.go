@@ -48,11 +48,15 @@ type WrangellServiceStatus struct {
 	// Replicas is the number of replicas of the serverless service
 	//+kubebuilder:validation:Minimum=0
 	//+optional
-	Replicas int32 `json:"replicas"`
+	Replicas uint16 `json:"replicas"`
 
 	// LatestRequest
 	//+optional
 	LatestRequest metav1.Time `json:"latestRequest,omitempty"`
+
+	// LoadBalancerIP is the IP address of the load balancer that fronts the service
+	//+optional
+	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
 }
 
 // +kubebuilder:object:root=true
