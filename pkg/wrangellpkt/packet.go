@@ -27,6 +27,7 @@ type (
 	ReqPacket struct {
 		Ip   uint32 // 32 bits
 		Port uint16 // 16 bits
+		Seq  uint32 // 32 bits
 	}
 
 	Message byte
@@ -67,7 +68,7 @@ func PacketFromBuffer(buf []byte) *Packet {
 			},
 		}
 	case MessageRequest:
-		if len(buf) < 7 {
+		if len(buf) < 11 {
 			return nil
 		}
 		return &Packet{
@@ -75,6 +76,7 @@ func PacketFromBuffer(buf []byte) *Packet {
 			ReqPacket: &ReqPacket{
 				Ip:   uint32(buf[1]) | uint32(buf[2])<<8 | uint32(buf[3])<<16 | uint32(buf[4])<<24,
 				Port: uint16(buf[5]) | uint16(buf[6])<<8,
+				Seq:  uint32(buf[7]) | uint32(buf[8])<<8 | uint32(buf[9])<<16 | uint32(buf[10])<<24,
 			},
 		}
 	default:
@@ -112,7 +114,7 @@ func (p *Packet) ToBuffer() []byte {
 		if p.ReqPacket == nil {
 			return nil
 		}
-		buf := make([]byte, 7)
+		buf := make([]byte, 11)
 		buf[0] = byte(p.Msg)
 		buf[1] = byte(p.ReqPacket.Ip)
 		buf[2] = byte(p.ReqPacket.Ip >> 8)
@@ -120,6 +122,10 @@ func (p *Packet) ToBuffer() []byte {
 		buf[4] = byte(p.ReqPacket.Ip >> 24)
 		buf[5] = byte(p.ReqPacket.Port)
 		buf[6] = byte(p.ReqPacket.Port >> 8)
+		buf[7] = byte(p.ReqPacket.Seq)
+		buf[8] = byte(p.ReqPacket.Seq >> 8)
+		buf[9] = byte(p.ReqPacket.Seq >> 16)
+		buf[10] = byte(p.ReqPacket.Seq >> 24)
 		return buf
 	default:
 		return nil
@@ -137,7 +143,7 @@ func (p *Packet) String() string {
 	case MessageRequest:
 		ip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(ip, p.ReqPacket.Ip)
-		return fmt.Sprintf("{msg: %s, ip: %s, port: %d}", p.Msg, ip.String(), p.ReqPacket.Port)
+		return fmt.Sprintf("{msg: %s, ip: %s, port: %d, seq: %d}", p.Msg, ip.String(), p.ReqPacket.Port, p.ReqPacket.Seq)
 	default:
 		return "Unknown"
 	}
