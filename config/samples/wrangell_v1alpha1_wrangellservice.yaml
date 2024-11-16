@@ -8,4 +8,4 @@ metadata:
 spec:
   image: "ghcr.io/knative/helloworld-go:latest"
   targetPort: 8080
-  port: 80
+  port: 8080

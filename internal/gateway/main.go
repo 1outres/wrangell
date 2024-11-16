@@ -3,15 +3,17 @@ package gateway
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
+	"syscall"
+	"time"
+
 	wrangellv1alpha1 "github.com/1outres/wrangell/api/v1alpha1"
 	"github.com/1outres/wrangell/pkg/wrangellpkt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"log"
-	"net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"syscall"
-	"time"
 )
 
 type (
@@ -141,10 +143,12 @@ func (s *server) clientRead(i int) {
 
 			if pkt.HelloPacket.Count != count {
 				for ipport, w := range s.targets {
+					ip := (net.IP)([]byte{ipport[0], ipport[1], ipport[2], ipport[3]})
+
 					pkt := wrangellpkt.Packet{
 						Msg: wrangellpkt.MessageTarget,
 						TargetPacket: &wrangellpkt.TargetPacket{
-							Ip:       uint32(ipport[0]) | uint32(ipport[1])<<8 | uint32(ipport[2])<<16 | uint32(ipport[3])<<24,
+							Ip:       binary.BigEndian.Uint32(ip.To4()),
 							Port:     uint16(ipport[4]) | uint16(ipport[5])<<8,
 							Replicas: w.replicas,
 						},
@@ -165,7 +169,12 @@ func (s *server) clientRead(i int) {
 
 			continue
 		} else if pkt.Msg == wrangellpkt.MessageRequest {
-			w, ok := s.targets[[6]byte{byte(pkt.ReqPacket.Ip), byte(pkt.ReqPacket.Ip >> 8), byte(pkt.ReqPacket.Ip >> 16), byte(pkt.ReqPacket.Ip >> 24), byte(pkt.ReqPacket.Port), byte(pkt.ReqPacket.Port >> 8)}]
+			ip := make(net.IP, 4)
+			binary.BigEndian.PutUint32(ip, pkt.ReqPacket.Ip)
+
+			fmt.Println(ip.String())
+
+			w, ok := s.targets[[6]byte{ip[0], ip[1], ip[2], ip[3], byte(pkt.ReqPacket.Port), byte(pkt.ReqPacket.Port >> 8)}]
 
 			if ok {
 				go func() {
@@ -183,6 +192,8 @@ func (s *server) clientRead(i int) {
 						log.Printf("Failed to update WrangellService: %s in %s", w.name, w.namespace)
 					}
 				}()
+			} else {
+				log.Printf("target not found : %v", conn.RemoteAddr())
 			}
 		} else {
 			log.Printf("invalid message received: %v", conn.RemoteAddr())
@@ -217,6 +228,8 @@ func (s *server) sendHello(conn net.Conn) error {
 }
 
 func (s *server) UpdateTarget(namespace string, name string, ip net.IP, port uint16, replicas uint16) {
+	ip = ip.To4()
+
 	pkt := wrangellpkt.Packet{
 		Msg: wrangellpkt.MessageTarget,
 		TargetPacket: &wrangellpkt.TargetPacket{
@@ -225,6 +238,8 @@ func (s *server) UpdateTarget(namespace string, name string, ip net.IP, port uin
 			Replicas: replicas,
 		},
 	}
+
+	fmt.Println(pkt.String())
 
 	s.targets[[6]byte{ip[0], ip[1], ip[2], ip[3], byte(port), byte(port >> 8)}] = wrangell{
 		replicas:  replicas,

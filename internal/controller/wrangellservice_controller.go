@@ -89,16 +89,24 @@ func (r *WrangellServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	if wrangell.Spec.IdleTimeout == 0 {
+		return ctrl.Result{}, nil
+	} else {
+		return ctrl.Result{
+			RequeueAfter: time.Duration(wrangell.Spec.IdleTimeout) * time.Second,
+		}, nil
+	}
 }
 
 func (r *WrangellServiceReconciler) updateStatus(ctx context.Context, wrangell *wrangellv1alpha1.WrangellService) error {
+	logger := log.FromContext(ctx)
+
 	if wrangell.Spec.IdleTimeout == 0 {
 		wrangell.Status.Replicas = 1
 	} else if wrangell.Status.LatestRequest.IsZero() {
 		wrangell.Status.Replicas = 0
 	} else {
-		if wrangell.Status.LatestRequest.Add(-1 * time.Second * time.Duration(wrangell.Spec.IdleTimeout)).After(time.Now()) {
+		if wrangell.Status.LatestRequest.Add(time.Second * time.Duration(wrangell.Spec.IdleTimeout)).Before(time.Now()) {
 			wrangell.Status.Replicas = 0
 		} else {
 			wrangell.Status.Replicas = 1
@@ -107,13 +115,15 @@ func (r *WrangellServiceReconciler) updateStatus(ctx context.Context, wrangell *
 
 	var svc corev1.Service
 	err := r.Get(ctx, client.ObjectKey{Namespace: wrangell.Namespace, Name: "svc-" + wrangell.Name}, &svc)
-	if err != nil || len(svc.Status.LoadBalancer.Ingress) < 1 {
+	if err != nil {
+		logger.Error(err, "unable to get Service")
+	} else if len(svc.Status.LoadBalancer.Ingress) < 1 {
 		wrangell.Status.LoadBalancerIP = ""
 	} else {
 		wrangell.Status.LoadBalancerIP = svc.Status.LoadBalancer.Ingress[0].IP
-	}
 
-	r.Server.UpdateTarget(wrangell.Namespace, wrangell.Name, net.ParseIP(wrangell.Status.LoadBalancerIP), uint16(wrangell.Spec.Port), wrangell.Status.Replicas)
+		r.Server.UpdateTarget(wrangell.Namespace, wrangell.Name, net.ParseIP(wrangell.Status.LoadBalancerIP), uint16(wrangell.Spec.Port), wrangell.Status.Replicas)
+	}
 
 	err = r.Status().Update(ctx, wrangell)
 	return err
