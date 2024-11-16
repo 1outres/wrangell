@@ -67,8 +67,14 @@ spec:
         imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
+          runAsNonRoot: false
+          runAsUser: 0 
+          runAsGroup: 0
           allowPrivilegeEscalation: false
           capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
             drop:
             - "ALL"
         livenessProbe:

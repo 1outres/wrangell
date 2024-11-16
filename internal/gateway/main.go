@@ -6,11 +6,16 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"syscall"
 	"time"
 
 	wrangellv1alpha1 "github.com/1outres/wrangell/api/v1alpha1"
 	"github.com/1outres/wrangell/pkg/wrangellpkt"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -191,6 +196,111 @@ func (s *server) clientRead(i int) {
 					if err != nil {
 						log.Printf("Failed to update WrangellService: %s in %s", w.name, w.namespace)
 					}
+
+					failed := false
+					var pod corev1.Pod
+					for {
+						var pods corev1.PodList
+						err := s.kubeClient.List(ctx, &pods, client.InNamespace(w.namespace), client.MatchingLabels{"wrangell.loutres.me/name": wrangell.Name})
+						if err != nil {
+							log.Printf("Failed to list Pods: %s in %s", w.name, w.namespace)
+							failed = true
+							break
+						}
+
+						if len(pods.Items) == 0 {
+							log.Printf("Waiting for the container to be created: %s in %s", w.name, w.namespace)
+
+							time.Sleep(50 * time.Millisecond)
+							continue
+						} else if len(pods.Items) > 1 {
+							log.Printf("Too many Pods found: %s in %s", w.name, w.namespace)
+							failed = true
+							break
+						}
+
+						pod = pods.Items[0]
+
+						if pod.Status.Phase != corev1.PodRunning {
+							log.Printf("Waiting for the container to be running: %s in %s", w.name, w.namespace)
+
+							time.Sleep(50 * time.Millisecond)
+							continue
+						}
+
+						break
+					}
+
+					if failed {
+						return
+					}
+
+					srcIp, err := s.getInterfaceIP("eth0")
+					if err != nil {
+						log.Fatalf("failed to get interface IP: %v", err)
+						return
+					}
+					var srcPort uint16 = 12345
+					podIp := pod.Status.PodIP
+					podPort := wrangell.Spec.Port
+
+					handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever)
+					if err != nil {
+						log.Fatalf("pcap open error: %v", err)
+						return
+					}
+					defer handle.Close()
+
+					fmt.Println("tcp and src host " + podIp + " and dst port " + string(srcPort))
+					err = handle.SetBPFFilter("tcp and src host " + podIp + " and dst port " + strconv.FormatUint(uint64(srcPort), 10))
+					if err != nil {
+						log.Fatalf("failed to set BPF filter: %v", err)
+					}
+
+					synStop := make(chan struct{})
+
+					go func() {
+						ticker := time.NewTicker(50 * time.Millisecond)
+						for {
+							select {
+							case <-ticker.C:
+								res := s.sendSYN(handle, srcIp, uint16(srcPort), podIp, uint16(podPort))
+								if !res {
+									return
+								}
+								log.Printf("Waiting for ACK: %s in %s", w.name, w.namespace)
+							case <-synStop:
+								return
+							}
+						}
+					}()
+
+					timeout := 30 * time.Second
+					timeoutChan := time.After(timeout)
+
+					packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+
+					for {
+						select {
+						case packet := <-packetSource.Packets():
+							tcpLayer := packet.Layer(layers.LayerTypeTCP)
+							if tcpLayer != nil {
+								tcp, _ := tcpLayer.(*layers.TCP)
+								fmt.Printf("Received packet: %v\n", tcp)
+								if tcp.SYN && tcp.ACK {
+									log.Printf("ACK received: %s in %s", w.name, w.namespace)
+									close(synStop)
+									break
+								}
+							}
+						case <-timeoutChan:
+							log.Printf("ACK timeout: %s in %s", w.name, w.namespace)
+							close(synStop)
+							break
+						}
+					}
+
+					// TODO
 				}()
 			} else {
 				log.Printf("target not found : %v", conn.RemoteAddr())
@@ -200,6 +310,63 @@ func (s *server) clientRead(i int) {
 			continue
 		}
 	}
+}
+
+func (s *server) getInterfaceIP(interfaceName string) (string, error) {
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get interface %s: %v", interfaceName, err)
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", fmt.Errorf("failed to get addresses for interface %s: %v", interfaceName, err)
+	}
+
+	for _, addr := range addrs {
+		switch v := addr.(type) {
+		case *net.IPNet:
+			if v.IP.To4() != nil {
+				return v.IP.String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no IPv4 address found for interface %s", interfaceName)
+}
+
+func (s *server) sendSYN(handle *pcap.Handle, srcIP string, srcPort uint16, dstIP string, dstPort uint16) bool {
+	fmt.Printf("Sending SYN: %s:%d -> %s:%d\n", srcIP, srcPort, dstIP, dstPort)
+
+	ip := &layers.IPv4{
+		SrcIP:    net.ParseIP(srcIP),
+		DstIP:    net.ParseIP(dstIP),
+		Protocol: layers.IPProtocolTCP,
+	}
+	tcp := &layers.TCP{
+		SrcPort: layers.TCPPort(srcPort),
+		DstPort: layers.TCPPort(dstPort),
+		SYN:     true,
+		Window:  14600,
+	}
+	tcp.SetNetworkLayerForChecksum(ip)
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+	if err := gopacket.SerializeLayers(buf, opts, ip, tcp); err != nil {
+		log.Printf("failed to serialize layers: %v", err)
+		return false
+	}
+
+	if err := handle.WritePacketData(buf.Bytes()); err != nil {
+		log.Printf("failed to send SYN packet: %v", err)
+		return false
+	}
+
+	return true
 }
 
 func (s *server) count() uint16 {
