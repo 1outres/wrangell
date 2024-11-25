@@ -1,0 +1,23 @@
+# permissions for end users to view events.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: wrangell
+    app.kubernetes.io/managed-by: kustomize
+  name: event-viewer-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events/status
+  verbs:
+  - get

@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- wrangell_v1alpha1_event.yaml
+- wrangell_v1alpha1_action.yaml
+- wrangell_v1alpha1_trigger.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

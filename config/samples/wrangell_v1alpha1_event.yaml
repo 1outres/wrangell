@@ -1,0 +1,9 @@
+apiVersion: wrangell.loutres.me/v1alpha1
+kind: Event
+metadata:
+  labels:
+    app.kubernetes.io/name: wrangell
+    app.kubernetes.io/managed-by: kustomize
+  name: event-sample
+spec:
+  # TODO(user): Add fields here
