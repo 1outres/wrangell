@@ -40,6 +40,7 @@ type TriggerStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:singular="wrgtrigger",shortName={"wrgtrg","wrgtrgs"}
 
 // Trigger is the Schema for the triggers API.
 type Trigger struct {

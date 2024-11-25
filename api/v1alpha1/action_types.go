@@ -40,6 +40,7 @@ type ActionStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,singular="wrgaction",shortName={"wrgaxn","wrgaxns"}
 
 // Action is the Schema for the actions API.
 type Action struct {

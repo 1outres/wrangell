@@ -1,0 +1,10 @@
+apiVersion: ctlptl.dev/v1alpha1
+kind: Registry
+name: wrangell-registry
+port: 5000
+---
+apiVersion: ctlptl.dev/v1alpha1
+kind: Cluster
+name: kind-wrangell-dev
+product: kind
+registry: wrangell-registry

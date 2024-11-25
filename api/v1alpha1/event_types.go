@@ -40,6 +40,7 @@ type EventStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,singular="wrgevent",shortName={"wrgevt","wrgevts"}
 
 // Event is the Schema for the events API.
 type Event struct {
