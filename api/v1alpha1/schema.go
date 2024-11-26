@@ -12,7 +12,7 @@ type DataSchema struct {
 
 type DataSchemaField struct {
 	Name string `json:"name"`
-	//+kubebuilder:validation:Enum=string;int;float;bool;string_list;int_list;float_list
+	// +kubebuilder:validation:Enum=string;int;float;bool;string_list;int_list;float_list
 	Type FieldType `json:"type"`
 }
 

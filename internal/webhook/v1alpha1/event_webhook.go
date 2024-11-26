@@ -52,7 +52,7 @@ func SetupEventWebhookWithManager(mgr ctrl.Manager) error {
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
 type EventCustomValidator struct {
-	//TODO(user): Add more fields as needed for validation
+	// TODO(user): Add more fields as needed for validation
 }
 
 var _ webhook.CustomValidator = &EventCustomValidator{}
@@ -65,7 +65,7 @@ func (v *EventCustomValidator) ValidateCreate(ctx context.Context, obj runtime.O
 	}
 	eventlog.Info("Validation for Event upon creation", "name", event.GetName())
 
-	return v.validate(ctx, event)
+	return v.validate(event)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type Event.
@@ -76,10 +76,10 @@ func (v *EventCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newOb
 	}
 	eventlog.Info("Validation for Event upon update", "name", event.GetName())
 
-	return v.validate(ctx, event)
+	return v.validate(event)
 }
 
-func (v *EventCustomValidator) validate(ctx context.Context, event *wrangellv1alpha1.Event) (admission.Warnings, error) {
+func (v *EventCustomValidator) validate(event *wrangellv1alpha1.Event) (admission.Warnings, error) {
 	err := event.Spec.Data.Validate()
 	if err != nil {
 		return nil, err

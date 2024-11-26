@@ -55,8 +55,8 @@ func (r *receiver) Start(ctx context.Context) error {
 
 		var namespace string
 
-		if namespace, exists := e.Extensions()["namespace"]; exists {
-			if val, ok := namespace.(string); ok {
+		if val, exists := e.Extensions()["namespace"]; exists {
+			if val, ok := val.(string); ok {
 				namespace = val
 			} else {
 				logger.Info("Ignoring event, invalid namespace", "id", e.ID(), "source", e.Source(), "type", e.Type())

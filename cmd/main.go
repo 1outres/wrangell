@@ -185,7 +185,9 @@ func main() {
 		setupLog.Error(err, "unable to initialize AMQP receiver")
 		os.Exit(1)
 	}
-	defer amqpReceiver.Close(ctx)
+	defer func() {
+		_ = amqpReceiver.Close(ctx)
+	}()
 	go func() {
 		if err := amqpReceiver.Start(ctx); err != nil {
 			setupLog.Error(err, "problem running AMQP receiver")

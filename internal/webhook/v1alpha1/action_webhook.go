@@ -53,7 +53,7 @@ func SetupActionWebhookWithManager(mgr ctrl.Manager) error {
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
 type ActionCustomValidator struct {
-	//TODO(user): Add more fields as needed for validation
+	// TODO(user): Add more fields as needed for validation
 }
 
 var _ webhook.CustomValidator = &ActionCustomValidator{}
@@ -66,7 +66,7 @@ func (v *ActionCustomValidator) ValidateCreate(ctx context.Context, obj runtime.
 	}
 	actionlog.Info("Validation for Action upon creation", "name", action.GetName())
 
-	return v.validate(ctx, action)
+	return v.validate(action)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type Action.
@@ -77,10 +77,10 @@ func (v *ActionCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newO
 	}
 	actionlog.Info("Validation for Action upon update", "name", action.GetName())
 
-	return v.validate(ctx, action)
+	return v.validate(action)
 }
 
-func (v *ActionCustomValidator) validate(ctx context.Context, action *wrangellv1alpha1.Action) (admission.Warnings, error) {
+func (v *ActionCustomValidator) validate(action *wrangellv1alpha1.Action) (admission.Warnings, error) {
 	_, err := url.Parse(action.Spec.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("endpoint is not a valid URL")
