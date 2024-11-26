@@ -25,17 +25,11 @@ import (
 
 // EventSpec defines the desired state of Event.
 type EventSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Event. Edit event_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Data DataSchema `json:"data"`
 }
 
 // EventStatus defines the observed state of Event.
 type EventStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true

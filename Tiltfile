@@ -44,4 +44,4 @@ docker_build_with_restart(
 
 local_resource(
     'Sample', 'kubectl apply -k ./config/samples',
-    deps=["./config/samples/kustomization.yaml"])
+    deps=["./config/samples/kustomization.yaml", "./config/samples/*"])

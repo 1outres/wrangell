@@ -4,6 +4,15 @@ metadata:
   labels:
     app.kubernetes.io/name: wrangell
     app.kubernetes.io/managed-by: kustomize
-  name: event-sample
+  name: me.loutres.wrangell.sample
 spec:
-  # TODO(user): Add fields here
+  data:
+    fields:
+      - name: user.name
+        type: string
+      - name: user.age
+        type: int
+      - name: user.aliases
+        type: string_list
+      - name: message
+        type: string

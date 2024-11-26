@@ -42,13 +42,85 @@ spec:
           spec:
             description: TriggerSpec defines the desired state of Trigger.
             properties:
-              foo:
-                description: Foo is an example field of Trigger. Edit trigger_types.go
-                  to remove/update
+              actions:
+                items:
+                  properties:
+                    action:
+                      type: string
+                    params:
+                      items:
+                        properties:
+                          fromData:
+                            properties:
+                              name:
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          fromYaml:
+                            x-kubernetes-preserve-unknown-fields: true
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - action
+                  - params
+                  type: object
+                type: array
+              conditions:
+                description: Conditions is a list of conditions that must be met for
+                  the trigger to fire.
+                items:
+                  type: string
+                type: array
+              event:
                 type: string
+            required:
+            - actions
+            - conditions
+            - event
             type: object
           status:
             description: TriggerStatus defines the observed state of Trigger.
+            properties:
+              history:
+                items:
+                  properties:
+                    id:
+                      type: string
+                    message:
+                      items:
+                        properties:
+                          message:
+                            type: string
+                          success:
+                            type: boolean
+                          time:
+                            format: date-time
+                            type: string
+                        required:
+                        - message
+                        - success
+                        - time
+                        type: object
+                      type: array
+                    source:
+                      type: string
+                    time:
+                      format: date-time
+                      type: string
+                  required:
+                  - id
+                  - message
+                  - source
+                  - time
+                  type: object
+                type: array
+            required:
+            - history
             type: object
         type: object
     served: true

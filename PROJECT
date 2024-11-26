@@ -16,6 +16,9 @@ resources:
   kind: Event
   path: github.com/1outres/wrangell/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -24,6 +27,9 @@ resources:
   kind: Action
   path: github.com/1outres/wrangell/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true

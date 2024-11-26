@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,17 +26,58 @@ import (
 
 // TriggerSpec defines the desired state of Trigger.
 type TriggerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Event string `json:"event"`
 
-	// Foo is an example field of Trigger. Edit trigger_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Conditions is a list of conditions that must be met for the trigger to fire.
+	Conditions []string `json:"conditions"`
+
+	Actions []TriggerAction `json:"actions"`
+}
+
+type TriggerAction struct {
+	Action string                   `json:"action"`
+	Params []TriggerActionParameter `json:"params"`
+}
+
+type TriggerActionParameter struct {
+	Name     string                            `json:"name"`
+	FromData *TriggerActionParameterDataSource `json:"fromData,omitempty"`
+	FromYaml *apiextensionsv1.JSON             `json:"fromYaml,omitempty"`
+}
+
+type TriggerActionParameterDataSource struct {
+	Name string `json:"name"`
+}
+
+type TriggerActionParameterJsonSource struct {
+	Json string `json:"json"`
 }
 
 // TriggerStatus defines the observed state of Trigger.
 type TriggerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	History []TriggerHistory `json:"history"`
+}
+
+type TriggerHistory struct {
+	Time   metav1.Time `json:"time"`
+	Source string      `json:"source"`
+	ID     string      `json:"id"`
+
+	Message []TriggerHistoryMessage `json:"message"`
+}
+
+type TriggerHistoryMessage struct {
+	Time    metav1.Time `json:"time"`
+	Success bool        `json:"success"`
+	Message string      `json:"message"`
+}
+
+func (th *TriggerHistory) AddMessage(success bool, message string) {
+	th.Message = append(th.Message, TriggerHistoryMessage{
+		Time:    metav1.Now(),
+		Success: success,
+		Message: message,
+	})
 }
 
 // +kubebuilder:object:root=true

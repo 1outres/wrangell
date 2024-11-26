@@ -6,4 +6,19 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: trigger-sample
 spec:
-  # TODO(user): Add fields here
+  event: me.loutres.wrangell.sample
+  conditions:
+    - "user.age > 18 && user.age < 30"
+    - "user.name != 'root'"
+    - "!(message contains 'Fuck')"
+  actions:
+    - action: me.loutres.wrangell.sample
+      params:
+        - name: source
+          fromYaml: "Kubernetes"
+        - name: message
+          fromData:
+            name: message
+        - name: username
+          fromData:
+            name: user.name

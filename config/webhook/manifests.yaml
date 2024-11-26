@@ -10,6 +10,46 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-wrangell-loutres-me-v1alpha1-action
+  failurePolicy: Fail
+  name: vaction-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - wrangell.loutres.me
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - actions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-wrangell-loutres-me-v1alpha1-event
+  failurePolicy: Fail
+  name: vevent-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - wrangell.loutres.me
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - events
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-wrangell-loutres-me-v1alpha1-trigger
   failurePolicy: Fail
   name: vtrigger-v1alpha1.kb.io

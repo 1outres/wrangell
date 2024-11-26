@@ -25,11 +25,9 @@ import (
 
 // ActionSpec defines the desired state of Action.
 type ActionSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Endpoint string `json:"endpoint"`
 
-	// Foo is an example field of Action. Edit action_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Data DataSchema `json:"data"`
 }
 
 // ActionStatus defines the observed state of Action.

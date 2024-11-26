@@ -42,10 +42,36 @@ spec:
           spec:
             description: ActionSpec defines the desired state of Action.
             properties:
-              foo:
-                description: Foo is an example field of Action. Edit action_types.go
-                  to remove/update
+              data:
+                properties:
+                  fields:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          enum:
+                          - string
+                          - int
+                          - float
+                          - bool
+                          - string_list
+                          - int_list
+                          - float_list
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    type: array
+                required:
+                - fields
+                type: object
+              endpoint:
                 type: string
+            required:
+            - data
+            - endpoint
             type: object
           status:
             description: ActionStatus defines the observed state of Action.

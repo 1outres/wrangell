@@ -4,6 +4,14 @@ metadata:
   labels:
     app.kubernetes.io/name: wrangell
     app.kubernetes.io/managed-by: kustomize
-  name: action-sample
+  name: me.loutres.wrangell.sample
 spec:
-  # TODO(user): Add fields here
+  endpoint: http://some-deployment.some-namespace.svc.cluster.local/invoke/sample
+  data:
+    fields:
+      - name: message
+        type: string
+      - name: username
+        type: string
+      - name: source
+        type: string
