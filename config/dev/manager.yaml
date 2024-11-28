@@ -7,3 +7,6 @@ spec:
   template:
     spec:
       securityContext: null
+      containers:
+      - name: manager
+        image: controller:latest

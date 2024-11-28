@@ -1,0 +1,892 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+    control-plane: controller-manager
+  name: wrangell-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: wrangell-system/wrangell-serving-cert
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: actions.wrangell.loutres.me
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: wrangell-webhook-service
+          namespace: wrangell-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+  group: wrangell.loutres.me
+  names:
+    kind: Action
+    listKind: ActionList
+    plural: actions
+    shortNames:
+    - wrgaxn
+    - wrgaxns
+    singular: wrgaction
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Action is the Schema for the actions API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActionSpec defines the desired state of Action.
+            properties:
+              data:
+                properties:
+                  fields:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          enum:
+                          - string
+                          - int
+                          - float
+                          - bool
+                          - string_list
+                          - int_list
+                          - float_list
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    type: array
+                required:
+                - fields
+                type: object
+              endpoint:
+                type: string
+            required:
+            - data
+            - endpoint
+            type: object
+          status:
+            description: ActionStatus defines the observed state of Action.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: wrangell-system/wrangell-serving-cert
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: events.wrangell.loutres.me
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: wrangell-webhook-service
+          namespace: wrangell-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+  group: wrangell.loutres.me
+  names:
+    kind: Event
+    listKind: EventList
+    plural: events
+    shortNames:
+    - wrgevt
+    - wrgevts
+    singular: wrgevent
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Event is the Schema for the events API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EventSpec defines the desired state of Event.
+            properties:
+              data:
+                properties:
+                  fields:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          enum:
+                          - string
+                          - int
+                          - float
+                          - bool
+                          - string_list
+                          - int_list
+                          - float_list
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    type: array
+                required:
+                - fields
+                type: object
+            required:
+            - data
+            type: object
+          status:
+            description: EventStatus defines the observed state of Event.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: wrangell-system/wrangell-serving-cert
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: triggers.wrangell.loutres.me
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: wrangell-webhook-service
+          namespace: wrangell-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+  group: wrangell.loutres.me
+  names:
+    kind: Trigger
+    listKind: TriggerList
+    plural: triggers
+    shortNames:
+    - wrgtrg
+    - wrgtrgs
+    singular: wrgtrigger
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Trigger is the Schema for the triggers API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TriggerSpec defines the desired state of Trigger.
+            properties:
+              actions:
+                items:
+                  properties:
+                    action:
+                      type: string
+                    params:
+                      items:
+                        properties:
+                          fromData:
+                            properties:
+                              name:
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          fromYaml:
+                            x-kubernetes-preserve-unknown-fields: true
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - action
+                  - params
+                  type: object
+                type: array
+              conditions:
+                description: Conditions is a list of conditions that must be met for
+                  the trigger to fire.
+                items:
+                  type: string
+                type: array
+              event:
+                type: string
+            required:
+            - actions
+            - conditions
+            - event
+            type: object
+          status:
+            description: TriggerStatus defines the observed state of Trigger.
+            properties:
+              history:
+                items:
+                  properties:
+                    id:
+                      type: string
+                    message:
+                      items:
+                        properties:
+                          message:
+                            type: string
+                          success:
+                            type: boolean
+                          time:
+                            format: date-time
+                            type: string
+                        required:
+                        - message
+                        - success
+                        - time
+                        type: object
+                      type: array
+                    source:
+                      type: string
+                    time:
+                      format: date-time
+                      type: string
+                  required:
+                  - id
+                  - message
+                  - source
+                  - time
+                  type: object
+                type: array
+            required:
+            - history
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-controller-manager
+  namespace: wrangell-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-leader-election-role
+  namespace: wrangell-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-action-editor-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - actions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - actions/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-action-viewer-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - actions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - actions/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-event-editor-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-event-viewer-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - events/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wrangell-manager-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - actions
+  - events
+  - triggers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - triggers/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wrangell-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wrangell-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-trigger-editor-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - triggers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - triggers/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-trigger-viewer-role
+rules:
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - triggers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wrangell.loutres.me
+  resources:
+  - triggers/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-leader-election-rolebinding
+  namespace: wrangell-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: wrangell-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: wrangell-controller-manager
+  namespace: wrangell-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: wrangell-manager-role
+subjects:
+- kind: ServiceAccount
+  name: wrangell-controller-manager
+  namespace: wrangell-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wrangell-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: wrangell-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: wrangell-controller-manager
+  namespace: wrangell-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+    control-plane: controller-manager
+  name: wrangell-controller-manager-metrics-service
+  namespace: wrangell-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: rabbitmq
+  name: wrangell-rabbitmq
+  namespace: wrangell-system
+spec:
+  ports:
+  - name: rabbitmq
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  selector:
+    run: rabbitmq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-webhook-service
+  namespace: wrangell-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+    control-plane: controller-manager
+  name: wrangell-controller-manager
+  namespace: wrangell-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        command:
+        - /manager
+        image: ghcr.io/1outres/wrangell:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: wrangell-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: rabbitmq
+  name: wrangell-rabbitmq
+  namespace: wrangell-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: rabbitmq
+  template:
+    metadata:
+      labels:
+        run: rabbitmq
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        command:
+        - rabbitmq-server
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: wrangell
+        - name: RABBITMQ_DEFAULT_PASS
+          value: wrangell
+        image: rabbitmq:4
+        imagePullPolicy: IfNotPresent
+        name: rabbitmq
+        ports:
+        - containerPort: 5672
+      hostname: rabbitmq
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: wrangell
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: wrangell
+  name: wrangell-serving-cert
+  namespace: wrangell-system
+spec:
+  dnsNames:
+  - wrangell-webhook-service.wrangell-system.svc
+  - wrangell-webhook-service.wrangell-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: wrangell-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: wrangell
+  name: wrangell-selfsigned-issuer
+  namespace: wrangell-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: wrangell-system/wrangell-serving-cert
+  name: wrangell-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: wrangell-webhook-service
+      namespace: wrangell-system
+      path: /validate-wrangell-loutres-me-v1alpha1-action
+  failurePolicy: Fail
+  name: vaction-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - wrangell.loutres.me
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - actions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: wrangell-webhook-service
+      namespace: wrangell-system
+      path: /validate-wrangell-loutres-me-v1alpha1-event
+  failurePolicy: Fail
+  name: vevent-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - wrangell.loutres.me
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - events
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: wrangell-webhook-service
+      namespace: wrangell-system
+      path: /validate-wrangell-loutres-me-v1alpha1-trigger
+  failurePolicy: Fail
+  name: vtrigger-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - wrangell.loutres.me
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - triggers
+  sideEffects: None

@@ -40,11 +40,6 @@ func SetupTriggerWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
-// Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 // +kubebuilder:webhook:path=/validate-wrangell-loutres-me-v1alpha1-trigger,mutating=false,failurePolicy=fail,sideEffects=None,groups=wrangell.loutres.me,resources=triggers,verbs=create;update,versions=v1alpha1,name=vtrigger-v1alpha1.kb.io,admissionReviewVersions=v1
 
 // +kubebuilder:rbac:groups=wrangell.loutres.me,resources=triggers,verbs=get;list;watch;create;update;patch;delete
@@ -141,8 +136,6 @@ func (v *TriggerCustomValidator) ValidateDelete(ctx context.Context, obj runtime
 		return nil, fmt.Errorf("expected a Trigger object but got %T", obj)
 	}
 	triggerlog.Info("Validation for Trigger upon deletion", "name", trigger.GetName())
-
-	// TODO(user): fill in your validation logic upon object deletion.
 
 	return nil, nil
 }
